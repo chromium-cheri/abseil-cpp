@@ -760,7 +760,7 @@ void* FlagOps(FlagOp op, const void* v1, void* v2, void* v3) {
       size_t round_to = alignof(FlagValue<T>);
       size_t offset =
           (sizeof(FlagImpl) + round_to - 1) / round_to * round_to;
-      return reinterpret_cast<void*>(offset);
+      return reinterpret_cast<void*>(static_cast<uintptr_t>(offset));
     }
   }
   return nullptr;
