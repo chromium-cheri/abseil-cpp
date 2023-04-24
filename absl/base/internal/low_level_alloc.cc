@@ -81,10 +81,14 @@ struct AllocList {
   struct Header {
     // Size of entire region, including this field. Must be
     // first. Valid in both allocated and unallocated blocks.
-    uintptr_t size;
+    size_t size;
 
     // kMagicAllocated or kMagicUnallocated xor this.
+#ifdef __CHERI_PURE_CAPABILITY__
+    ptraddr_t magic;
+#else
     uintptr_t magic;
+#endif
 
     // Pointer to parent arena.
     LowLevelAlloc::Arena *arena;
@@ -277,8 +281,13 @@ LowLevelAlloc::Arena *LowLevelAlloc::DefaultArena() {
 }
 
 // magic numbers to identify allocated and unallocated blocks
+#ifdef __CHERI_PURE_CAPABILITY__
+static const ptraddr_t kMagicAllocated = 0x4c833e95U;
+static const ptraddr_t kMagicUnallocated = ~kMagicAllocated;
+#else
 static const uintptr_t kMagicAllocated = 0x4c833e95U;
 static const uintptr_t kMagicUnallocated = ~kMagicAllocated;
+#endif
 
 namespace {
 class ABSL_SCOPED_LOCKABLE ArenaLock {
@@ -323,9 +332,15 @@ class ABSL_SCOPED_LOCKABLE ArenaLock {
 
 // create an appropriate magic number for an object at "ptr"
 // "magic" should be kMagicAllocated or kMagicUnallocated
+#ifdef __CHERI_PURE_CAPABILITY__
+inline static ptraddr_t Magic(ptraddr_t magic, AllocList::Header *ptr) {
+  return magic ^ reinterpret_cast<ptraddr_t>(ptr);
+}
+#else
 inline static uintptr_t Magic(uintptr_t magic, AllocList::Header *ptr) {
   return magic ^ reinterpret_cast<uintptr_t>(ptr);
 }
+#endif
 
 namespace {
 size_t GetPageSize() {
@@ -437,17 +452,35 @@ bool LowLevelAlloc::DeleteArena(Arena *arena) {
 
 // Addition, checking for overflow.  The intent is to die if an external client
 // manages to push through a request that would cause arithmetic to fail.
+#ifdef __CHERI_PURE_CAPABILITY__
+template<typename T>
+static inline T CheckedAdd(T a, size_t b) {
+  T sum = a + b;
+  ABSL_RAW_CHECK(sum >= a, "LowLevelAlloc arithmetic overflow");
+  return sum;
+}
+#else
 static inline uintptr_t CheckedAdd(uintptr_t a, uintptr_t b) {
   uintptr_t sum = a + b;
   ABSL_RAW_CHECK(sum >= a, "LowLevelAlloc arithmetic overflow");
   return sum;
 }
+#endif
 
 // Return value rounded up to next multiple of align.
 // align must be a power of two.
+#ifdef __CHERI_PURE_CAPABILITY__
+template<typename T>
+static inline T RoundUp(T value, size_t align) {
+  T rval = __builtin_align_up(value, align);
+  ABSL_RAW_CHECK(rval >= value, "LowLevelAlloc arithmetic overflow");
+  return rval;
+}
+#else
 static inline uintptr_t RoundUp(uintptr_t addr, uintptr_t align) {
   return CheckedAdd(addr, align - 1) & ~(align - 1);
 }
+#endif
 
 // Equivalent to "return prev->next[i]" but with sanity checking
 // that the freelist is in the correct order, that it
