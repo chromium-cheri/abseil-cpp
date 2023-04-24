@@ -150,7 +150,12 @@ bool safe_strtou64_base(absl::string_view text, uint64_t* value, int base);
 bool safe_strtou128_base(absl::string_view text, absl::uint128* value,
                          int base);
 
+#if defined(__CHERI_PURE_CAPABILITY__)
+// This should be at least 2 pointers + 2 bytes
+static const int kFastToBufferSize = 64;
+#else
 static const int kFastToBufferSize = 32;
+#endif
 static const int kSixDigitsToBufferSize = 16;
 
 // Helper function for fast formatting of floating-point values.
