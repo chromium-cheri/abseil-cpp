@@ -428,7 +428,7 @@ static constexpr int kBitsPerWord = 32;  // tid_array is uint32_t.
 
 // Returns the TID to tid_array.
 static void FreeTID(void *v) {
-  intptr_t tid = reinterpret_cast<intptr_t>(v);
+  size_t tid = reinterpret_cast<size_t>(v);
   int word = tid / kBitsPerWord;
   uint32_t mask = ~(1u << (tid % kBitsPerWord));
   absl::base_internal::SpinLockHolder lock(&tid_lock);
@@ -453,7 +453,7 @@ static void InitGetTID() {
 pid_t GetTID() {
   absl::call_once(tid_once, InitGetTID);
 
-  intptr_t tid = reinterpret_cast<intptr_t>(pthread_getspecific(tid_key));
+  size_t tid = reinterpret_cast<size_t>(pthread_getspecific(tid_key));
   if (tid != 0) {
     return tid;
   }
@@ -480,7 +480,8 @@ pid_t GetTID() {
     (*tid_array)[word] |= 1u << bit;  // Mark the TID as allocated.
   }
 
-  if (pthread_setspecific(tid_key, reinterpret_cast<void *>(tid)) != 0) {
+  if (pthread_setspecific(tid_key, reinterpret_cast<void *>(
+          static_cast<uintptr_t>(tid))) != 0) {
     perror("pthread_setspecific failed");
     abort();
   }
