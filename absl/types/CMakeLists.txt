@@ -57,51 +57,52 @@ absl_cc_library(
     absl::raw_logging_internal
 )
 
-absl_cc_test(
-  NAME
-    any_test
-  SRCS
-    "any_test.cc"
-  COPTS
-    ${ABSL_TEST_COPTS}
-  DEPS
-    absl::any
-    absl::config
-    absl::exception_testing
-    absl::raw_logging_internal
-    absl::test_instance_tracker
-    GTest::gmock_main
-)
+# XXX-AM: Temporarily disable these because of RTTI
+# absl_cc_test(
+#   NAME
+#     any_test
+#   SRCS
+#     "any_test.cc"
+#   COPTS
+#     ${ABSL_TEST_COPTS}
+#   DEPS
+#     absl::any
+#     absl::config
+#     absl::exception_testing
+#     absl::raw_logging_internal
+#     absl::test_instance_tracker
+#     GTest::gmock_main
+# )
 
-absl_cc_test(
-  NAME
-    any_test_noexceptions
-  SRCS
-    "any_test.cc"
-  COPTS
-    ${ABSL_TEST_COPTS}
-  DEPS
-    absl::any
-    absl::config
-    absl::exception_testing
-    absl::raw_logging_internal
-    absl::test_instance_tracker
-    GTest::gmock_main
-)
+# absl_cc_test(
+#   NAME
+#     any_test_noexceptions
+#   SRCS
+#     "any_test.cc"
+#   COPTS
+#     ${ABSL_TEST_COPTS}
+#   DEPS
+#     absl::any
+#     absl::config
+#     absl::exception_testing
+#     absl::raw_logging_internal
+#     absl::test_instance_tracker
+#     GTest::gmock_main
+# )
 
-absl_cc_test(
-  NAME
-    any_exception_safety_test
-  SRCS
-    "any_exception_safety_test.cc"
-  COPTS
-    ${ABSL_TEST_COPTS}
-  DEPS
-    absl::any
-    absl::config
-    absl::exception_safety_testing
-    GTest::gmock_main
-)
+# absl_cc_test(
+#   NAME
+#     any_exception_safety_test
+#   SRCS
+#     "any_exception_safety_test.cc"
+#   COPTS
+#     ${ABSL_TEST_COPTS}
+#   DEPS
+#     absl::any
+#     absl::config
+#     absl::exception_safety_testing
+#     GTest::gmock_main
+# )
 
 absl_cc_library(
   NAME
@@ -241,57 +242,58 @@ absl_cc_test(
 )
 
 # Internal-only target, do not depend on directly.
-absl_cc_library(
-  NAME
-    conformance_testing
-  HDRS
-    "internal/conformance_aliases.h"
-    "internal/conformance_archetype.h"
-    "internal/conformance_profile.h"
-    "internal/conformance_testing.h"
-    "internal/conformance_testing_helpers.h"
-    "internal/parentheses.h"
-    "internal/transform_args.h"
-  COPTS
-    ${ABSL_DEFAULT_COPTS}
-  DEPS
-    absl::algorithm
-    absl::debugging
-    absl::type_traits
-    absl::strings
-    absl::utility
-    GTest::gmock_main
-  TESTONLY
-)
+# XXX-AM: Disable temporarily because of RTTI
+# absl_cc_library(
+#   NAME
+#     conformance_testing
+#   HDRS
+#     "internal/conformance_aliases.h"
+#     "internal/conformance_archetype.h"
+#     "internal/conformance_profile.h"
+#     "internal/conformance_testing.h"
+#     "internal/conformance_testing_helpers.h"
+#     "internal/parentheses.h"
+#     "internal/transform_args.h"
+#   COPTS
+#     ${ABSL_DEFAULT_COPTS}
+#   DEPS
+#     absl::algorithm
+#     absl::debugging
+#     absl::type_traits
+#     absl::strings
+#     absl::utility
+#     GTest::gmock_main
+#   TESTONLY
+# )
 
-absl_cc_test(
-  NAME
-    conformance_testing_test
-  SRCS
-    "internal/conformance_testing_test.cc"
-  COPTS
-    ${ABSL_TEST_COPTS}
-    ${ABSL_EXCEPTIONS_FLAG}
-  LINKOPTS
-    ${ABSL_EXCEPTIONS_FLAG_LINKOPTS}
-  DEPS
-    absl::conformance_testing
-    absl::type_traits
-    GTest::gmock_main
-)
+# absl_cc_test(
+#   NAME
+#     conformance_testing_test
+#   SRCS
+#     "internal/conformance_testing_test.cc"
+#   COPTS
+#     ${ABSL_TEST_COPTS}
+#     ${ABSL_EXCEPTIONS_FLAG}
+#   LINKOPTS
+#     ${ABSL_EXCEPTIONS_FLAG_LINKOPTS}
+#   DEPS
+#     absl::conformance_testing
+#     absl::type_traits
+#     GTest::gmock_main
+# )
 
-absl_cc_test(
-  NAME
-    conformance_testing_test_no_exceptions
-  SRCS
-    "internal/conformance_testing_test.cc"
-  COPTS
-    ${ABSL_TEST_COPTS}
-  DEPS
-    absl::conformance_testing
-    absl::type_traits
-    GTest::gmock_main
-)
+# absl_cc_test(
+#   NAME
+#     conformance_testing_test_no_exceptions
+#   SRCS
+#     "internal/conformance_testing_test.cc"
+#   COPTS
+#     ${ABSL_TEST_COPTS}
+#   DEPS
+#     absl::conformance_testing
+#     absl::type_traits
+#     GTest::gmock_main
+# )
 
 absl_cc_library(
   NAME

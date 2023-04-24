@@ -432,19 +432,20 @@ absl_cc_library(
   PUBLIC
 )
 
-absl_cc_test(
-  NAME
-    container_memory_test
-  SRCS
-    "internal/container_memory_test.cc"
-  COPTS
-    ${ABSL_TEST_COPTS}
-  DEPS
-    absl::container_memory
-    absl::strings
-    absl::test_instance_tracker
-    GTest::gmock_main
-)
+# XXX-AM: Disabled to work around having to use -fno-rtti
+# absl_cc_test(
+#   NAME
+#     container_memory_test
+#   SRCS
+#     "internal/container_memory_test.cc"
+#   COPTS
+#     ${ABSL_TEST_COPTS}
+#   DEPS
+#     absl::container_memory
+#     absl::strings
+#     absl::test_instance_tracker
+#     GTest::gmock_main
+# )
 
 # Internal-only target, do not depend on directly.
 absl_cc_library(
