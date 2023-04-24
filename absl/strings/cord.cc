@@ -166,7 +166,11 @@ constexpr unsigned char Cord::InlineRep::kMaxInline;
 #endif
 
 inline void Cord::InlineRep::set_data(const char* data, size_t n) {
+#if defined(__CHERI_PURE_CAPABILITY__)
+  static_assert(kMaxInline == 31, "set_data is hard-coded for a length of 15");
+#else
   static_assert(kMaxInline == 15, "set_data is hard-coded for a length of 15");
+#endif
   data_.set_inline_data(data, n);
 }
 

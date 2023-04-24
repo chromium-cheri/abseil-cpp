@@ -663,7 +663,13 @@ TEST_P(CordRingBuildTest, AppendStringHavingExtra) {
 }
 
 TEST_P(CordRingBuildTest, AppendStringHavingPartialExtra) {
+#if defined(__CHERI_PURE_CAPABILITY__)
+  absl::string_view str1 = "12345678901234567890"
+                           "12345678901234567890"
+                           "1234567890";
+#else
   absl::string_view str1 = "1234";
+#endif
   absl::string_view str2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
   // Create flat with at least one extra byte. We don't expect to have sized
