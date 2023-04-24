@@ -44,8 +44,20 @@ const char* StrErrorAdaptor(int errnum, char* buf, size_t buflen) {
     if (ret) *buf = '\0';
     return buf;
   } else {
+#ifdef __CHERI_PURE_CAPABILITY__
+    /*
+     * XXX-AM: Disable this because CHERI clang will complain about the cast
+     * even though this happens in a branch that is elided with the constexpr
+     * conditional.
+     */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcheri-capability-misuse"
+#endif
     // GNU `strerror_r`; `ret` is `char *`:
     return reinterpret_cast<const char*>(ret);
+#ifdef __CHERI_PURE_CAPABILITY__
+#pragma clang diagnostic pop
+#endif
   }
 #endif
 }
