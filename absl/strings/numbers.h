@@ -173,8 +173,15 @@ char* FastIntToBuffer(uint64_t, char*);
 // use templates to call the appropriate one of the four overloads above.
 template <typename int_type>
 char* FastIntToBuffer(int_type i, char* buffer) {
+#if defined(__CHERI_PURE_CAPABILITY__)
+  static_assert(sizeof(i) <= 64 / 8 ||
+                std::is_same<int_type, intptr_t>::value ||
+                std::is_same<int_type, uintptr_t>::value,
+                "FastIntToBuffer works only with 64-bit-or-less integers.");
+#else
   static_assert(sizeof(i) <= 64 / 8,
                 "FastIntToBuffer works only with 64-bit-or-less integers.");
+#endif
   // TODO(jorg): This signed-ness check is used because it works correctly
   // with enums, and it also serves to check that int_type is not a pointer.
   // If one day something like std::is_signed<enum E> works, switch to it.

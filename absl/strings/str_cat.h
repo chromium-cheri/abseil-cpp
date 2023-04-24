@@ -162,7 +162,7 @@ struct Hex {
       : Hex(spec, static_cast<uint64_t>(v)) {}
   template <typename Pointee>
   explicit Hex(Pointee* v, PadSpec spec = absl::kNoPad)
-      : Hex(spec, reinterpret_cast<uintptr_t>(v)) {}
+      : Hex(spec, static_cast<ptraddr_t>(reinterpret_cast<uintptr_t>(v))) {}
 
  private:
   Hex(PadSpec spec, uint64_t v)
@@ -254,6 +254,19 @@ class AlphaNum {
   AlphaNum(const char* c_str)                     // NOLINT(runtime/explicit)
       : piece_(NullSafeStringView(c_str)) {}      // NOLINT(runtime/explicit)
   AlphaNum(absl::string_view pc) : piece_(pc) {}  // NOLINT(runtime/explicit)
+
+#if defined(__CHERI_PURE_CAPABILITY__)
+  // XXX-AM: We can not use ptraddr_t here because we must retain
+  // the signedness of intptr_t for string conversion purposes.
+  AlphaNum(intptr_t x)  // NOLINT(*)
+      : piece_(digits_, static_cast<size_t>(
+            numbers_internal::FastIntToBuffer(x, digits_) -
+            &digits_[0])) {}
+  AlphaNum(uintptr_t x)  // NOLINT(*)
+      : piece_(digits_, static_cast<size_t>(
+            numbers_internal::FastIntToBuffer(x, digits_) -
+            &digits_[0])) {}
+#endif
 
   template <typename Allocator>
   AlphaNum(  // NOLINT(runtime/explicit)
