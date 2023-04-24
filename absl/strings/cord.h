@@ -1019,9 +1019,24 @@ namespace cord_internal {
 // Fast implementation of memmove for up to 15 bytes. This implementation is
 // safe for overlapping regions. If nullify_tail is true, the destination is
 // padded with '\0' up to 16 bytes.
+// CHERI requires this to work up to 31 bytes.
 template <bool nullify_tail = false>
 inline void SmallMemmove(char* dst, const char* src, size_t n) {
-  if (n >= 8) {
+#if defined(__CHERI_PURE_CAPABILITY__)
+  if (n >= 16) {
+    assert(n <= 32);
+    __uint128_t buf1;
+    __uint128_t buf2;
+    memcpy(&buf1, src, 16);
+    memcpy(&buf2, src + n - 16, 16);
+    if (nullify_tail) {
+      memset(dst, 0, n);
+    }
+    memcpy(dst, &buf1, 16);
+    memcpy(dst + n - 16, &buf2, 16);
+  } else
+#endif
+      if (n >= 8) {
     assert(n <= 16);
     uint64_t buf1;
     uint64_t buf2;

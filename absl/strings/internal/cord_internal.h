@@ -21,6 +21,10 @@
 #include <cstdint>
 #include <type_traits>
 
+#if defined(__CHERI_PURE_CAPABILITY__)
+#include <cheri/cheric.h>
+#endif
+
 #include "absl/base/attributes.h"
 #include "absl/base/config.h"
 #include "absl/base/internal/endian.h"
@@ -191,8 +195,14 @@ enum CordRepKind {
   // If a new tag is needed in the future, then 'FLAT' and 'MAX_FLAT_TAG' should
   // be adjusted as well as the Tag <---> Size mapping logic so that FLAT still
   // represents the minimum flat allocation size. (32 bytes as of now).
+  // XXX-AM: CHERI changes this mapping, the minimum size grows to 64 bytes.
+  // As a result there are fewer FLAT sizes.
   FLAT = 6,
+#if defined(__CHERI_PURE_CAPABILITY__)
+  MAX_FLAT_TAG = 244
+#else
   MAX_FLAT_TAG = 248
+#endif
 };
 
 // There are various locations where we want to check if some rep is a 'plain'
@@ -239,6 +249,7 @@ struct CordRep {
   // `height`, `begin` and `end` in the 3 entries. Otherwise we would need to
   // allocate room for these in the derived class, as not all compilers reuse
   // padding space from the base class (clang and gcc do, MSVC does not, etc)
+  // XXX-AM: Flexible array member will require __subobject_* annotation
   uint8_t storage[3];
 
   // Returns true if this instance's tag matches the requested type.
@@ -415,7 +426,11 @@ ABSL_CONST_INIT CordRepExternal
     ConstInitExternalStorage<Str>::value(Str::value);
 
 enum {
+#if defined(__CHERI_PURE_CAPABILITY__)
+  kMaxInline = 31,
+#else
   kMaxInline = 15,
+#endif
 };
 
 constexpr char GetOrNull(absl::string_view data, size_t pos) {
@@ -426,7 +441,11 @@ constexpr char GetOrNull(absl::string_view data, size_t pos) {
 // guarantees that the least significant byte of cordz_info matches the last
 // byte of the inline data representation in as_chars_, which holds the inlined
 // size or the 'is_tree' bit.
+#if defined(__CHERI_PURE_CAPABILITY__)
+using cordz_info_t = intptr_t;
+#else
 using cordz_info_t = int64_t;
+#endif
 
 // Assert that the `cordz_info` pointer value perfectly overlaps the last half
 // of `as_chars_` and can hold a pointer value.
@@ -453,11 +472,58 @@ class InlineData {
   // This is the 'null' / initial value of 'cordz_info'. The null value
   // is specifically big endian 1 as with 64-bit pointers, the last
   // byte of cordz_info overlaps with the last byte holding the tag.
+#if defined(__CHERI_PURE_CAPABILITY__)
+  static constexpr cordz_info_t kNullCordzInfo = 1;
+#else
   static constexpr cordz_info_t kNullCordzInfo = BigEndianByte(1);
+#endif
 
   constexpr InlineData() : as_chars_{0} {}
   explicit InlineData(DefaultInitType) {}
   explicit constexpr InlineData(CordRep* rep) : as_tree_(rep) {}
+#if defined(__CHERI_PURE_CAPABILITY__)
+  // XXX-AM: This is incomplete for big_endian.
+  // We have to always have the tag bit in the least significant bits of the
+  // pointer, otherwise this will never work with capabilities.
+  // The alternative of adding an extra byte would result in weird alignment
+  // which is probably worse.
+#if defined(ABSL_IS_BIG_ENDIAN)
+#error "Big endian not yet supported for CHERI"
+#endif
+  explicit constexpr InlineData(absl::string_view chars)
+      : as_chars_{static_cast<char>((chars.size() << 1)),
+                  GetOrNull(chars, 1),
+                  GetOrNull(chars, 2),
+                  GetOrNull(chars, 3),
+                  GetOrNull(chars, 4),
+                  GetOrNull(chars, 5),
+                  GetOrNull(chars, 6),
+                  GetOrNull(chars, 7),
+                  GetOrNull(chars, 8),
+                  GetOrNull(chars, 9),
+                  GetOrNull(chars, 10),
+                  GetOrNull(chars, 11),
+                  GetOrNull(chars, 12),
+                  GetOrNull(chars, 13),
+                  GetOrNull(chars, 14),
+                  GetOrNull(chars, 15),
+                  GetOrNull(chars, 16),
+                  GetOrNull(chars, 17),
+                  GetOrNull(chars, 18),
+                  GetOrNull(chars, 19),
+                  GetOrNull(chars, 20),
+                  GetOrNull(chars, 21),
+                  GetOrNull(chars, 22),
+                  GetOrNull(chars, 23),
+                  GetOrNull(chars, 24),
+                  GetOrNull(chars, 25),
+                  GetOrNull(chars, 26),
+                  GetOrNull(chars, 27),
+                  GetOrNull(chars, 28),
+                  GetOrNull(chars, 29),
+                  GetOrNull(chars, 30),
+                  GetOrNull(chars, 31)} {}
+#else
   explicit constexpr InlineData(absl::string_view chars)
       : as_chars_{
             GetOrNull(chars, 0),  GetOrNull(chars, 1),
@@ -468,6 +534,7 @@ class InlineData {
             GetOrNull(chars, 10), GetOrNull(chars, 11),
             GetOrNull(chars, 12), GetOrNull(chars, 13),
             GetOrNull(chars, 14), static_cast<char>((chars.size() << 1))} {}
+#endif
 
   // Returns true if the current instance is empty.
   // The 'empty value' is an inlined data value of zero length.
@@ -489,8 +556,8 @@ class InlineData {
   static bool is_either_profiled(const InlineData& data1,
                                  const InlineData& data2) {
     assert(data1.is_tree() && data2.is_tree());
-    return (data1.as_tree_.cordz_info | data2.as_tree_.cordz_info) !=
-           kNullCordzInfo;
+    return ((ptraddr_t)data1.as_tree_.cordz_info |
+            (ptraddr_t)data2.as_tree_.cordz_info) != kNullCordzInfo;
   }
 
   // Returns the cordz_info sampling instance for this instance, or nullptr
@@ -498,8 +565,12 @@ class InlineData {
   // Requires the current instance to hold a tree value.
   CordzInfo* cordz_info() const {
     assert(is_tree());
+#if defined(__CHERI_PURE_CAPABILITY__)
+    intptr_t info = as_tree_.cordz_info;
+#else
     intptr_t info = static_cast<intptr_t>(
         absl::big_endian::ToHost64(static_cast<uint64_t>(as_tree_.cordz_info)));
+#endif
     assert(info & 1);
     return reinterpret_cast<CordzInfo*>(info - 1);
   }
@@ -510,8 +581,12 @@ class InlineData {
   void set_cordz_info(CordzInfo* cordz_info) {
     assert(is_tree());
     uintptr_t info = reinterpret_cast<uintptr_t>(cordz_info) | 1;
+#if defined(__CHERI_PURE_CAPABILITY__)
+    as_tree_.cordz_info = info;
+#else
     as_tree_.cordz_info =
         static_cast<cordz_info_t>(absl::big_endian::FromHost64(info));
+#endif
   }
 
   // Resets the current cordz_info to null / empty.
@@ -524,7 +599,11 @@ class InlineData {
   // Requires the current instance to hold inline data.
   const char* as_chars() const {
     assert(!is_tree());
+#if defined(__CHERI_PURE_CAPABILITY__)
+    return cheri_setbounds(as_chars_, kMaxInline + 1);
+#else
     return as_chars_;
+#endif
   }
 
   // Returns a mutable pointer to the character data inside this instance.
@@ -542,7 +621,13 @@ class InlineData {
   //
   // It's an error to read from the returned pointer without a preceding write
   // if the current instance does not hold inline data, i.e.: is_tree() == true.
-  char* as_chars() { return as_chars_; }
+  char* as_chars() {
+#if defined(__CHERI_PURE_CAPABILITY__)
+    return cheri_setbounds(as_chars_, kMaxInline + 1);
+#else
+    return as_chars_;
+#endif
+  }
 
   // Returns the tree value of this value.
   // Requires the current instance to hold a tree value.
@@ -583,6 +668,7 @@ class InlineData {
 
  private:
   // See cordz_info_t for forced alignment and size of `cordz_info` details.
+#if !defined(__CHERI_PURE_CAPABILITY__)
   struct AsTree {
     explicit constexpr AsTree(absl::cord_internal::CordRep* tree)
         : rep(tree), cordz_info(kNullCordzInfo) {}
@@ -595,9 +681,31 @@ class InlineData {
     };
     cordz_info_t cordz_info;
   };
+#else   // __CHERI_PURE_CAPABILITY__
+  struct AsTree {
+    explicit constexpr AsTree(absl::cord_internal::CordRep* tree)
+        : cordz_info(kNullCordzInfo), rep(tree) {}
+    cordz_info_t cordz_info;
+    union {
+      absl::cord_internal::CordRep* rep;
+      cordz_info_t unused_aligner;
+    };
+  };
+#endif  // __CHERI_PURE_CAPABILITY__
 
+#if defined(__CHERI_PURE_CAPABILITY__)
+  // XXX-AM: This should be fine because the only time when we care about
+  // preserving tags in the cordz_info_t is when it is profiled.
+  // There the manipulation goes through as_tree_ and the tag is only used
+  // as a read-only flag.
+  // This is still extremely delicate because it assumes a capability
+  // encoding that stores the LSB of the address in the LSB of the capability.
+  char& tag() { return reinterpret_cast<char*>(this)[0]; }
+  char tag() const { return reinterpret_cast<const char*>(this)[0]; }
+#else
   char& tag() { return reinterpret_cast<char*>(this)[kMaxInline]; }
   char tag() const { return reinterpret_cast<const char*>(this)[kMaxInline]; }
+#endif
 
   // If the data has length <= kMaxInline, we store it in `as_chars_`, and
   // store the size in the last char of `as_chars_` shifted left + 1.
