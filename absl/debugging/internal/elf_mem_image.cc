@@ -48,7 +48,8 @@ namespace {
 const int kElfClass = ELFCLASS32;
 int ElfBind(const ElfW(Sym) *symbol) { return ELF32_ST_BIND(symbol->st_info); }
 int ElfType(const ElfW(Sym) *symbol) { return ELF32_ST_TYPE(symbol->st_info); }
-#elif __SIZEOF_POINTER__ == 8
+#elif __SIZEOF_POINTER__ == 8 || \
+    (__SIZEOF_POINTER__ == 16 && defined(__CHERI_PURE_CAPABILITY__))
 const int kElfClass = ELFCLASS64;
 int ElfBind(const ElfW(Sym) *symbol) { return ELF64_ST_BIND(symbol->st_info); }
 int ElfType(const ElfW(Sym) *symbol) { return ELF64_ST_TYPE(symbol->st_info); }
