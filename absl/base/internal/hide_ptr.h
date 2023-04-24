@@ -25,9 +25,15 @@ namespace base_internal {
 
 // Arbitrary value with high bits set. Xor'ing with it is unlikely
 // to map one valid pointer to another valid pointer.
+#if defined(__CHERI_PURE_CAPABILITY__)
+constexpr ptraddr_t HideMask() {
+  return ptraddr_t{0};
+}
+#else
 constexpr uintptr_t HideMask() {
   return (uintptr_t{0xF03A5F7BU} << (sizeof(uintptr_t) - 4) * 8) | 0xF03A5F7BU;
 }
+#endif
 
 // Hide a pointer from the leak checker. For internal use only.
 // Differs from absl::IgnoreLeak(ptr) in that absl::IgnoreLeak(ptr) causes ptr
