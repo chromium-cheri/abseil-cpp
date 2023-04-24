@@ -202,7 +202,7 @@ struct Hex {
       : Hex(spec, static_cast<uint64_t>(v)) {}
   template <typename Pointee>
   explicit Hex(Pointee* v, PadSpec spec = absl::kNoPad)
-      : Hex(spec, reinterpret_cast<uintptr_t>(v)) {}
+      : Hex(spec, static_cast<ptraddr_t>(reinterpret_cast<uintptr_t>(v))) {}
 
   template <typename S>
   friend void AbslStringify(S& sink, Hex hex) {
@@ -357,6 +357,19 @@ class AlphaNum {
       const T& v ABSL_ATTRIBUTE_LIFETIME_BOUND,
       strings_internal::StringifySink&& sink ABSL_ATTRIBUTE_LIFETIME_BOUND = {})
       : piece_(strings_internal::ExtractStringification(sink, v)) {}
+
+#if defined(__CHERI_PURE_CAPABILITY__)
+  // XXX-AM: We can not use ptraddr_t here because we must retain
+  // the signedness of intptr_t for string conversion purposes.
+  AlphaNum(intptr_t x)  // NOLINT(*)
+      : piece_(digits_, static_cast<size_t>(
+            numbers_internal::FastIntToBuffer(x, digits_) -
+            &digits_[0])) {}
+  AlphaNum(uintptr_t x)  // NOLINT(*)
+      : piece_(digits_, static_cast<size_t>(
+            numbers_internal::FastIntToBuffer(x, digits_) -
+            &digits_[0])) {}
+#endif
 
   template <typename Allocator>
   AlphaNum(  // NOLINT(runtime/explicit)
