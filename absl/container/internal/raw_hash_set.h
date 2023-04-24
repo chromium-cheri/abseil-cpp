@@ -515,7 +515,7 @@ inline size_t PerTableSalt(const ctrl_t* ctrl) {
   // The low bits of the pointer have little or no entropy because of
   // alignment. We shift the pointer to try to use higher entropy bits. A
   // good number seems to be 12 bits, because that aligns with page size.
-  return reinterpret_cast<uintptr_t>(ctrl) >> 12;
+  return reinterpret_cast<ptraddr_t>(ctrl) >> 12;
 }
 // Extracts the H1 portion of a hash: 57 bits mixed with a per-table salt.
 inline size_t H1(size_t hash, const ctrl_t* ctrl) {
