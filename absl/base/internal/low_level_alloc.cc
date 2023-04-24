@@ -354,9 +354,18 @@ size_t GetPageSize() {
 size_t RoundedUpBlockSize() {
   // Round up block sizes to a power of two close to the header size.
   size_t round_up = 16;
+#if defined(__CHERI_PURE_CAPABILITY__)
+  while (round_up < offsetof(AllocList, next) + sizeof(void *)) {
+    round_up += round_up;
+  }
+#else
   while (round_up < sizeof(AllocList::Header)) {
     round_up += round_up;
   }
+#endif
+  ABSL_RAW_CHECK(round_up >= offsetof(AllocList, next) + sizeof(void *),
+                 "block roundup size not big enough to fit at least one "
+                 "skiplist level");
   return round_up;
 }
 
