@@ -62,6 +62,10 @@
 #endif  // !MAP_ANONYMOUS
 #endif  // __APPLE__
 
+#if defined(__CHERI_PURE_CAPABILITY__)
+#include <cheri/cheric.h>
+#endif
+
 namespace absl {
 ABSL_NAMESPACE_BEGIN
 namespace base_internal {
@@ -502,9 +506,13 @@ static AllocList *Next(int i, AllocList *prev, LowLevelAlloc::Arena *arena) {
     ABSL_RAW_CHECK(next->header.arena == arena, "bad arena pointer in Next()");
     if (prev != &arena->freelist) {
       ABSL_RAW_CHECK(prev < next, "unordered freelist");
+#if !defined(__CHERI_PURE_CAPABILITY__)
+      // XXX-AM: This must be allowed for the time being as we can not coalesce
+      // disjointed capabilities.
       ABSL_RAW_CHECK(reinterpret_cast<char *>(prev) + prev->header.size <
                          reinterpret_cast<char *>(next),
                      "malformed freelist");
+#endif
     }
   }
   return next;
@@ -515,6 +523,17 @@ static void Coalesce(AllocList *a) {
   AllocList *n = a->next[0];
   if (n != nullptr && reinterpret_cast<char *>(a) + a->header.size ==
                           reinterpret_cast<char *>(n)) {
+#if defined(__CHERI_PURE_CAPABILITY__)
+    // XXX-AM: Prevent coalescing of allocations if the block
+    // capability does not allow it.
+    // This is a workaround that will cause fragmentation, we shoud find a
+    // way to re-derive capabilities, as long as they don't belong to
+    // different reservations.
+    if (cheri_gettop(a) < static_cast<ptraddr_t>(reinterpret_cast<intptr_t>(n) +
+                                                 n->header.size)) {
+      return;
+    }
+#endif
     LowLevelAlloc::Arena *arena = a->header.arena;
     a->header.size += n->header.size;
     n->header.magic = 0;
