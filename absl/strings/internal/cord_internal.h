@@ -195,14 +195,8 @@ enum CordRepKind {
   // If a new tag is needed in the future, then 'FLAT' and 'MAX_FLAT_TAG' should
   // be adjusted as well as the Tag <---> Size mapping logic so that FLAT still
   // represents the minimum flat allocation size. (32 bytes as of now).
-  // XXX-AM: CHERI changes this mapping, the minimum size grows to 64 bytes.
-  // As a result there are fewer FLAT sizes.
   FLAT = 6,
-#if defined(__CHERI_PURE_CAPABILITY__)
-  MAX_FLAT_TAG = 244
-#else
   MAX_FLAT_TAG = 248
-#endif
 };
 
 // There are various locations where we want to check if some rep is a 'plain'
@@ -426,11 +420,7 @@ ABSL_CONST_INIT CordRepExternal
     ConstInitExternalStorage<Str>::value(Str::value);
 
 enum {
-#if defined(__CHERI_PURE_CAPABILITY__)
-  kMaxInline = 31,
-#else
   kMaxInline = 15,
-#endif
 };
 
 constexpr char GetOrNull(absl::string_view data, size_t pos) {
@@ -449,7 +439,9 @@ using cordz_info_t = int64_t;
 
 // Assert that the `cordz_info` pointer value perfectly overlaps the last half
 // of `as_chars_` and can hold a pointer value.
+#if !defined(__CHERI_PURE_CAPABILITY__)
 static_assert(sizeof(cordz_info_t) * 2 == kMaxInline + 1, "");
+#endif
 static_assert(sizeof(cordz_info_t) >= sizeof(intptr_t), "");
 
 // BigEndianByte() creates a big endian representation of 'value', i.e.: a big
@@ -478,63 +470,32 @@ class InlineData {
   static constexpr cordz_info_t kNullCordzInfo = BigEndianByte(1);
 #endif
 
+#if defined(__CHERI_PURE_CAPABILITY__)
+  constexpr InlineData() : as_chars_{0}, cordz_info_{0} {}
+#else
   constexpr InlineData() : as_chars_{0} {}
+#endif
   explicit InlineData(DefaultInitType) {}
   explicit constexpr InlineData(CordRep* rep) : as_tree_(rep) {}
-#if defined(__CHERI_PURE_CAPABILITY__)
-  // XXX-AM: This is incomplete for big_endian.
-  // We have to always have the tag bit in the least significant bits of the
-  // pointer, otherwise this will never work with capabilities.
-  // The alternative of adding an extra byte would result in weird alignment
-  // which is probably worse.
-#if defined(ABSL_IS_BIG_ENDIAN)
-#error "Big endian not yet supported for CHERI"
-#endif
-  explicit constexpr InlineData(absl::string_view chars)
-      : as_chars_{static_cast<char>((chars.size() << 1)),
-                  GetOrNull(chars, 1),
-                  GetOrNull(chars, 2),
-                  GetOrNull(chars, 3),
-                  GetOrNull(chars, 4),
-                  GetOrNull(chars, 5),
-                  GetOrNull(chars, 6),
-                  GetOrNull(chars, 7),
-                  GetOrNull(chars, 8),
-                  GetOrNull(chars, 9),
-                  GetOrNull(chars, 10),
-                  GetOrNull(chars, 11),
-                  GetOrNull(chars, 12),
-                  GetOrNull(chars, 13),
-                  GetOrNull(chars, 14),
-                  GetOrNull(chars, 15),
-                  GetOrNull(chars, 16),
-                  GetOrNull(chars, 17),
-                  GetOrNull(chars, 18),
-                  GetOrNull(chars, 19),
-                  GetOrNull(chars, 20),
-                  GetOrNull(chars, 21),
-                  GetOrNull(chars, 22),
-                  GetOrNull(chars, 23),
-                  GetOrNull(chars, 24),
-                  GetOrNull(chars, 25),
-                  GetOrNull(chars, 26),
-                  GetOrNull(chars, 27),
-                  GetOrNull(chars, 28),
-                  GetOrNull(chars, 29),
-                  GetOrNull(chars, 30),
-                  GetOrNull(chars, 31)} {}
-#else
   explicit constexpr InlineData(absl::string_view chars)
       : as_chars_{
-            GetOrNull(chars, 0),  GetOrNull(chars, 1),
-            GetOrNull(chars, 2),  GetOrNull(chars, 3),
-            GetOrNull(chars, 4),  GetOrNull(chars, 5),
-            GetOrNull(chars, 6),  GetOrNull(chars, 7),
-            GetOrNull(chars, 8),  GetOrNull(chars, 9),
-            GetOrNull(chars, 10), GetOrNull(chars, 11),
-            GetOrNull(chars, 12), GetOrNull(chars, 13),
-            GetOrNull(chars, 14), static_cast<char>((chars.size() << 1))} {}
+    GetOrNull(chars, 0), GetOrNull(chars, 1), GetOrNull(chars, 2),
+        GetOrNull(chars, 3), GetOrNull(chars, 4), GetOrNull(chars, 5),
+        GetOrNull(chars, 6), GetOrNull(chars, 7), GetOrNull(chars, 8),
+        GetOrNull(chars, 9), GetOrNull(chars, 10), GetOrNull(chars, 11),
+        GetOrNull(chars, 12), GetOrNull(chars, 13), GetOrNull(chars, 14),
+#if defined(__CHERI_PURE_CAPABILITY__)
+        // XXX-AM: The pure-capability version maintains the same size
+        // and layout of inline data, however the tag byte is kept in
+        // the LSB of the cordz_info_t pointer.
+        '\0'
+  }
+  , cordz_info_ { static_cast<cordz_info_t>((chars.size() << 1)) }
+#else
+        static_cast<char>((chars.size() << 1))
+  }
 #endif
+  {}
 
   // Returns true if the current instance is empty.
   // The 'empty value' is an inlined data value of zero length.
@@ -668,7 +629,6 @@ class InlineData {
 
  private:
   // See cordz_info_t for forced alignment and size of `cordz_info` details.
-#if !defined(__CHERI_PURE_CAPABILITY__)
   struct AsTree {
     explicit constexpr AsTree(absl::cord_internal::CordRep* tree)
         : rep(tree), cordz_info(kNullCordzInfo) {}
@@ -681,43 +641,50 @@ class InlineData {
     };
     cordz_info_t cordz_info;
   };
-#else   // __CHERI_PURE_CAPABILITY__
-  struct AsTree {
-    explicit constexpr AsTree(absl::cord_internal::CordRep* tree)
-        : cordz_info(kNullCordzInfo), rep(tree) {}
-    cordz_info_t cordz_info;
-    union {
-      absl::cord_internal::CordRep* rep;
-      cordz_info_t unused_aligner;
-    };
-  };
-#endif  // __CHERI_PURE_CAPABILITY__
 
 #if defined(__CHERI_PURE_CAPABILITY__)
-  // XXX-AM: This should be fine because the only time when we care about
-  // preserving tags in the cordz_info_t is when it is profiled.
-  // There the manipulation goes through as_tree_ and the tag is only used
-  // as a read-only flag.
-  // This is still extremely delicate because it assumes a capability
-  // encoding that stores the LSB of the address in the LSB of the capability.
-  char& tag() { return reinterpret_cast<char*>(this)[0]; }
-  char tag() const { return reinterpret_cast<const char*>(this)[0]; }
+#if defined(ABSL_IS_BIG_ENDIAN)
+  char& tag() {
+    return reinterpret_cast<char*>(&cordz_info_)[sizeof(cordz_info_t) - 1];
+  }
+  char tag() const {
+    return reinterpret_cast<const char*>(
+        &cordz_info_)[sizeof(cordz_info_t) - 1];
+  }
 #else
+  char& tag() { return reinterpret_cast<char*>(&cordz_info_)[0]; }
+  char tag() const { return reinterpret_cast<const char*>(&cordz_info_)[0]; }
+#endif
+#else   // !__CHERI_PURE_CAPABILITY__
   char& tag() { return reinterpret_cast<char*>(this)[kMaxInline]; }
   char tag() const { return reinterpret_cast<const char*>(this)[kMaxInline]; }
-#endif
+#endif  // !__CHERI_PURE_CAPABILITY__
 
   // If the data has length <= kMaxInline, we store it in `as_chars_`, and
   // store the size in the last char of `as_chars_` shifted left + 1.
   // Else we store it in a tree and store a pointer to that tree in
   // `as_tree_.rep` and store a tag in `tagged_size`.
+#if defined(__CHERI_PURE_CAPABILITY__)
+  union {
+    struct {
+      char as_chars_[kMaxInline + 1];
+      cordz_info_t cordz_info_;
+    };
+    AsTree as_tree_;
+  };
+#else
   union {
     char as_chars_[kMaxInline + 1];
     AsTree as_tree_;
   };
+#endif
 };
 
+#if defined(__CHERI_PURE_CAPABILITY__)
+static_assert(sizeof(InlineData) == 2 * sizeof(uintptr_t), "");
+#else
 static_assert(sizeof(InlineData) == kMaxInline + 1, "");
+#endif
 
 inline CordRepSubstring* CordRep::substring() {
   assert(IsSubstring());
