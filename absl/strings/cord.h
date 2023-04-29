@@ -806,7 +806,14 @@ class Cord {
   class InlineRep {
    public:
     static constexpr unsigned char kMaxInline = cord_internal::kMaxInline;
+#if defined(__CHERI_PURE_CAPABILITY__)
+    static constexpr unsigned char kInlineDataSiz =
+        sizeof(cord_internal::InlineData);
+    static_assert(kInlineDataSiz >= sizeof(absl::cord_internal::CordRep*), "");
+#else
+    static constexpr unsigned char kInlineDataSiz = kMaxInline;
     static_assert(kMaxInline >= sizeof(absl::cord_internal::CordRep*), "");
+#endif
 
     constexpr InlineRep() : data_() {}
     explicit InlineRep(InlineData::DefaultInitType init) : data_(init) {}
@@ -1141,7 +1148,7 @@ inline size_t Cord::InlineRep::size() const {
 
 inline cord_internal::CordRepFlat* Cord::InlineRep::MakeFlatWithExtraCapacity(
     size_t extra) {
-  static_assert(cord_internal::kMinFlatLength >= sizeof(data_), "");
+  static_assert(cord_internal::kMinFlatLength >= kMaxInline, "");
   size_t len = data_.inline_size();
   auto* result = CordRepFlat::New(len + extra);
   result->length = len;
