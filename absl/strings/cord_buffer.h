@@ -389,7 +389,7 @@ class CordBuffer {
       cord_internal::CordRepFlat* rep;
     };
     struct Short {
-      char data[sizeof(Long) - 1];
+      char data[kInlineCapacity];
       char raw_size = 1;
     };
 #else
@@ -400,7 +400,7 @@ class CordBuffer {
     };
     struct Short {
       char raw_size = 1;
-      char data[sizeof(Long) - 1];
+      char data[kInlineCapacity];
     };
 #endif
 
