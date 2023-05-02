@@ -414,7 +414,11 @@ constexpr FormatConversionCharSet ArgumentToConv() {
 // A type-erased handle to a format argument.
 class FormatArgImpl {
  private:
+#if defined(__CHERI_PURE_CAPABILITY__)
+  enum { kInlinedSpace = sizeof(void*) };
+#else
   enum { kInlinedSpace = 8 };
+#endif
 
   using VoidPtr = str_format_internal::VoidPtr;
 
