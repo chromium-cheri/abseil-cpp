@@ -443,20 +443,45 @@ TEST(Table, EmptyFunctorOptimization) {
   static_assert(std::is_empty<std::equal_to<absl::string_view>>::value, "");
   static_assert(std::is_empty<std::allocator<int>>::value, "");
 
-  struct MockTable {
+  struct MockTableStateless {
     void* ctrl;
     void* slots;
     size_t size;
     size_t capacity;
-    size_t growth_left;
-    void* infoz;
+    std::tuple<size_t,  // growth_left
+               void*    // infoz
+               >
+        settings;
   };
-  struct MockTableInfozDisabled {
+  struct MockTableStateful {
     void* ctrl;
     void* slots;
     size_t size;
     size_t capacity;
-    size_t growth_left;
+    std::tuple<size_t,  // growth_left
+               void*,   // infoz
+               size_t   // stateful hasher size
+               >
+        settings;
+  };
+  struct MockTableInfozDisabledStateless {
+    void* ctrl;
+    void* slots;
+    size_t size;
+    size_t capacity;
+    std::tuple<size_t  // growth_left
+               >
+        settings;
+  };
+  struct MockTableInfozDisabledStateful {
+    void* ctrl;
+    void* slots;
+    size_t size;
+    size_t capacity;
+    std::tuple<size_t,  // growth_left
+               size_t   // stateful hasher size
+               >
+        settings;
   };
   struct StatelessHash {
     size_t operator()(absl::string_view) const { return 0; }
@@ -466,22 +491,22 @@ TEST(Table, EmptyFunctorOptimization) {
   };
 
   if (std::is_empty<HashtablezInfoHandle>::value) {
-    EXPECT_EQ(sizeof(MockTableInfozDisabled),
+    EXPECT_EQ(sizeof(MockTableInfozDisabledStateless),
               sizeof(raw_hash_set<StringPolicy, StatelessHash,
                                   std::equal_to<absl::string_view>,
                                   std::allocator<int>>));
 
-    EXPECT_EQ(sizeof(MockTableInfozDisabled) + sizeof(StatefulHash),
+    EXPECT_EQ(sizeof(MockTableInfozDisabledStateful),
               sizeof(raw_hash_set<StringPolicy, StatefulHash,
                                   std::equal_to<absl::string_view>,
                                   std::allocator<int>>));
   } else {
-    EXPECT_EQ(sizeof(MockTable),
+    EXPECT_EQ(sizeof(MockTableStateless),
               sizeof(raw_hash_set<StringPolicy, StatelessHash,
                                   std::equal_to<absl::string_view>,
                                   std::allocator<int>>));
 
-    EXPECT_EQ(sizeof(MockTable) + sizeof(StatefulHash),
+    EXPECT_EQ(sizeof(MockTableStateful),
               sizeof(raw_hash_set<StringPolicy, StatefulHash,
                                   std::equal_to<absl::string_view>,
                                   std::allocator<int>>));
