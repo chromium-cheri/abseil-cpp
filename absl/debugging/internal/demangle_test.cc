@@ -159,7 +159,11 @@ static const char *DemangleStackConsumption(const char *mangled,
 // with some level of nesting. With alternate signal stack we have 64K,
 // but some signal handlers run on thread stack, and could have arbitrarily
 // little space left (so we don't want to make this number too large).
+#if defined(__CHERI_PURE_CAPABILITY__)
+const int kStackConsumptionUpperLimit = 16 * 1024;
+#else
 const int kStackConsumptionUpperLimit = 8192;
+#endif
 
 // Returns a mangled name nested to the given depth.
 static std::string NestedMangledName(int depth) {
