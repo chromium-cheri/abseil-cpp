@@ -383,12 +383,9 @@ class FormatArgImpl {
   template <typename T>
   explicit FormatArgImpl(const T& value) {
     using D = typename DecayType<T>::type;
-#if !defined(__CHERI_PURE_CAPABILITY__)
-    // XXX-AM: Just skipping through this, should investigate further
     static_assert(
         std::is_same<D, const T&>::value || storage_policy<D>::value == ByValue,
         "Decayed types must be stored by value");
-#endif
     Init(static_cast<D>(value));
   }
 
