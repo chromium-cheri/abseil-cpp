@@ -807,9 +807,12 @@ void BtreeMultiMapTest() {
 
 template <typename K, int N = 256>
 void SetTest() {
-  EXPECT_EQ(
-      sizeof(absl::btree_set<K>),
-      2 * sizeof(void *) + sizeof(typename absl::btree_set<K>::size_type));
+  constexpr size_t expect_size =
+      2 * sizeof(void *) + sizeof(typename absl::btree_set<K>::size_type);
+  constexpr size_t align = std::alignment_of<absl::btree_set<K>>::value;
+  constexpr size_t aligned_size = (expect_size + (align - 1)) & ~(align - 1);
+
+  EXPECT_EQ(sizeof(absl::btree_set<K>), aligned_size);
   using BtreeSet = absl::btree_set<K>;
   using CountingBtreeSet =
       absl::btree_set<K, std::less<K>, PropagatingCountingAlloc<K>>;
@@ -819,9 +822,12 @@ void SetTest() {
 
 template <typename K, int N = 256>
 void MapTest() {
-  EXPECT_EQ(
-      sizeof(absl::btree_map<K, K>),
-      2 * sizeof(void *) + sizeof(typename absl::btree_map<K, K>::size_type));
+  constexpr size_t expect_size =
+      2 * sizeof(void *) + sizeof(typename absl::btree_map<K, K>::size_type);
+  constexpr size_t align = std::alignment_of<absl::btree_map<K, K>>::value;
+  constexpr size_t aligned_size = (expect_size + (align - 1)) & ~(align - 1);
+
+  EXPECT_EQ(sizeof(absl::btree_map<K, K>), aligned_size);
   using BtreeMap = absl::btree_map<K, K>;
   using CountingBtreeMap =
       absl::btree_map<K, K, std::less<K>,
@@ -844,9 +850,12 @@ TEST(Btree, map_pair) { MapTest<std::pair<int, int>>(); }
 
 template <typename K, int N = 256>
 void MultiSetTest() {
-  EXPECT_EQ(
-      sizeof(absl::btree_multiset<K>),
-      2 * sizeof(void *) + sizeof(typename absl::btree_multiset<K>::size_type));
+  constexpr size_t expect_size =
+      2 * sizeof(void *) + sizeof(typename absl::btree_multiset<K>::size_type);
+  constexpr size_t align = std::alignment_of<absl::btree_multiset<K>>::value;
+  constexpr size_t aligned_size = (expect_size + (align - 1)) & ~(align - 1);
+
+  EXPECT_EQ(sizeof(absl::btree_multiset<K>), aligned_size);
   using BtreeMSet = absl::btree_multiset<K>;
   using CountingBtreeMSet =
       absl::btree_multiset<K, std::less<K>, PropagatingCountingAlloc<K>>;
@@ -856,9 +865,13 @@ void MultiSetTest() {
 
 template <typename K, int N = 256>
 void MultiMapTest() {
-  EXPECT_EQ(sizeof(absl::btree_multimap<K, K>),
-            2 * sizeof(void *) +
-                sizeof(typename absl::btree_multimap<K, K>::size_type));
+  constexpr size_t expect_size =
+      2 * sizeof(void *) +
+      sizeof(typename absl::btree_multimap<K, K>::size_type);
+  constexpr size_t align = std::alignment_of<absl::btree_multimap<K, K>>::value;
+  constexpr size_t aligned_size = (expect_size + (align - 1)) & ~(align - 1);
+
+  EXPECT_EQ(sizeof(absl::btree_multimap<K, K>), aligned_size);
   using BtreeMMap = absl::btree_multimap<K, K>;
   using CountingBtreeMMap =
       absl::btree_multimap<K, K, std::less<K>,
