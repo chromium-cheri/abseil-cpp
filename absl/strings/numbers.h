@@ -213,8 +213,15 @@ char* FastIntToBuffer(int_type i, char* buffer) {
 template <typename int_type>
 ABSL_MUST_USE_RESULT bool safe_strtoi_base(absl::string_view s, int_type* out,
                                            int base) {
+#if defined(__CHERI_PURE_CAPABILITY__)
+  static_assert(sizeof(*out) == 4 || sizeof(*out) == 8 ||
+                std::is_same<int_type, intptr_t>::value ||
+                std::is_same<int_type, uintptr_t>::value,
+                "SimpleAtoi works only with 32-bit or 64-bit integers.");
+#else
   static_assert(sizeof(*out) == 4 || sizeof(*out) == 8,
                 "SimpleAtoi works only with 32-bit or 64-bit integers.");
+#endif
   static_assert(!std::is_floating_point<int_type>::value,
                 "Use SimpleAtof or SimpleAtod instead.");
   bool parsed;
@@ -223,7 +230,7 @@ ABSL_MUST_USE_RESULT bool safe_strtoi_base(absl::string_view s, int_type* out,
   // If one day something like std::is_signed<enum E> works, switch to it.
   // These conditions are constexpr bools to suppress MSVC warning C4127.
   constexpr bool kIsSigned = static_cast<int_type>(1) - 2 < 0;
-  constexpr bool kUse64Bit = sizeof(*out) == 64 / 8;
+  constexpr bool kUse64Bit = sizeof(*out) > 32 / 8;
   if (kIsSigned) {
     if (kUse64Bit) {
       int64_t val;
