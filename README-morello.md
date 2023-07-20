@@ -51,7 +51,8 @@ The change of runtime linker can be verified with `readelf -l`.
 
 Unit tests can be run as follows
 ```
-$ ctest -B out
+$ cd out
+$ ctest
 ```
 
 The following tests are expected to fail:
