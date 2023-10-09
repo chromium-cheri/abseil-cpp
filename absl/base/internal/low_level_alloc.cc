@@ -362,14 +362,14 @@ size_t RoundedUpBlockSize() {
   while (round_up < offsetof(AllocList, next) + sizeof(void *)) {
     round_up += round_up;
   }
+  ABSL_RAW_CHECK(round_up >= offsetof(AllocList, next) + sizeof(void *),
+                 "block roundup size not big enough to fit at least one "
+                 "skiplist level");
 #else
   while (round_up < sizeof(AllocList::Header)) {
     round_up += round_up;
   }
 #endif
-  ABSL_RAW_CHECK(round_up >= offsetof(AllocList, next) + sizeof(void *),
-                 "block roundup size not big enough to fit at least one "
-                 "skiplist level");
   return round_up;
 }
 
