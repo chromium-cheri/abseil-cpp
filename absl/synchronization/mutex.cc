@@ -340,8 +340,7 @@ static struct SynchEvent {     // this is a trivial hash table for the events
 static SynchEvent *EnsureSynchEvent(std::atomic<intptr_t> *addr,
                                     const char *name, ptraddr_t bits,
                                     ptraddr_t lockbit) {
-  uint32_t h = static_cast<ptraddr_t>(reinterpret_cast<intptr_t>(addr)) %
-               kNSynchEvent;
+  uint32_t h = reinterpret_cast<ptraddr_t>(addr) % kNSynchEvent;
   SynchEvent *e;
   // first look for existing SynchEvent struct..
   synch_event_mu.Lock();
@@ -394,8 +393,7 @@ static void UnrefSynchEvent(SynchEvent *e) {
 // is clear before doing so).
 static void ForgetSynchEvent(std::atomic<intptr_t> *addr, ptraddr_t bits,
                              ptraddr_t lockbit) {
-  uint32_t h = static_cast<ptraddr_t>(reinterpret_cast<intptr_t>(addr)) %
-               kNSynchEvent;
+  uint32_t h = reinterpret_cast<ptraddr_t>(addr) % kNSynchEvent;
   SynchEvent **pe;
   SynchEvent *e;
   synch_event_mu.Lock();
@@ -419,8 +417,7 @@ static void ForgetSynchEvent(std::atomic<intptr_t> *addr, ptraddr_t bits,
 // "addr", if any.  The pointer returned is valid until the UnrefSynchEvent() is
 // called.
 static SynchEvent *GetSynchEvent(const void *addr) {
-  uint32_t h = static_cast<ptraddr_t>(reinterpret_cast<intptr_t>(addr)) %
-               kNSynchEvent;
+  uint32_t h = reinterpret_cast<ptraddr_t>(addr) % kNSynchEvent;
   SynchEvent *e;
   synch_event_mu.Lock();
   for (e = synch_event[h];
@@ -1948,7 +1945,7 @@ static void CheckForMutexCorruption(intptr_t v, const char* label) {
   // Test for either of two situations that should not occur in v:
   //   kMuWriter and kMuReader
   //   kMuWrWait and !kMuWait
-  const uintptr_t w = static_cast<uintptr_t>(v ^ kMuWait);
+  const ptraddr_t w = static_cast<ptraddr_t>(v ^ kMuWait);
   // By flipping that bit, we can now test for:
   //   kMuWriter and kMuReader in w
   //   kMuWrWait and kMuWait in w
