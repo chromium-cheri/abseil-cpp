@@ -65,7 +65,7 @@ static void ReclaimThreadIdentity(void* v) {
 
 // Return value rounded up to next multiple of align.
 // Align must be a power of two.
-static intptr_t RoundUp(intptr_t addr, intptr_t align) {
+static intptr_t RoundUp(intptr_t addr, ptraddr_t align) {
   return (addr + align - 1) & ~(align - 1);
 }
 
