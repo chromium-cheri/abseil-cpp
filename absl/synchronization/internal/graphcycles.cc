@@ -336,7 +336,8 @@ class PointerMap {
   std::array<int32_t, kHashTableSize> table_;
 
   static uint32_t Hash(void* ptr) {
-    return reinterpret_cast<uintptr_t>(ptr) % kHashTableSize;
+    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(ptr) %
+                                 kHashTableSize);
   }
 };
 
