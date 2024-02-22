@@ -204,8 +204,8 @@ struct Hex {
   template <typename Int>
   explicit Hex(
       Int v, PadSpec spec = absl::kNoPad,
-      typename std::enable_if<std::is_same_v<Int, intcap_t> ||
-                              std::is_same_v<Int, uintcap_t>>::type* = nullptr)
+      typename std::enable_if<std::is_same<Int, intcap_t>::value ||
+                              std::is_same<Int, uintcap_t>::value>::type* = nullptr)
       : Hex(spec, static_cast<uint64_t>(v)) {}
 #endif
   template <typename Pointee>
