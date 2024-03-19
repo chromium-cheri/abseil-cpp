@@ -71,9 +71,16 @@ inline void *non_temporal_store_memcpy(void *__restrict dst,
   // memcpy() the misaligned header. At the end of this if block, <d> is
   // aligned to a 64-byte cacheline boundary or <len> == 0.
   if (reinterpret_cast<uintptr_t>(d) & (kCacheLineSize - 1)) {
+#if defined(__CHERI_PURE_CAPABILITY__)
+    size_t bytes_before_alignment_boundary =
+        kCacheLineSize -
+        (static_cast<size_t>(
+        reinterpret_cast<uintptr_t>(d) & (kCacheLineSize - 1)));
+#else
     uintptr_t bytes_before_alignment_boundary =
         kCacheLineSize -
         (reinterpret_cast<uintptr_t>(d) & (kCacheLineSize - 1));
+#endif
     size_t header_len = (std::min)(bytes_before_alignment_boundary, len);
     assert(bytes_before_alignment_boundary < kCacheLineSize);
     memcpy(d, s, header_len);
